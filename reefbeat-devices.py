@@ -8,12 +8,13 @@ from threading import Thread,Event
 import subprocess
 import time
 from signal import pthread_kill, SIGTSTP
+import pathlib
+import traceback
 
 class MyServer(HTTPServer):
     def __init__(self, handler,config):
         self.config = config
-        self.cache={}
-        self.access={}
+        self._db={}
         #Test if local IP exists
         must_create_ip=True
         for line in subprocess.Popen(
@@ -27,57 +28,90 @@ class MyServer(HTTPServer):
             print("Creating IP: %s "%config.ip)
             time.sleep(3)
         super().__init__((self.config.ip,self.config.port), handler)
+        #fetch all_data and put them in cache
+        for file_p in list(pathlib.Path().rglob("data")):
+            file_s=str(file_p)
+            path = file_s.replace('/data','')
+            self._db[path]={}
+            with open(file_s) as f:
+                if file_s.endswith('description.xml/data'):
+                    data=f.read()
+                else:
+                    data = json.loads(json.dumps(json.load(f)).replace("__REEFBEAT_DEVICE_IP__",self.config.ip))
+                self._db[path]['data']=data
+            with open(file_s.replace('/data','/access.json')) as f:
+                access=json.load(f)
+                self._db[path]['access']=access
+        #print(json.dumps(self._db,sort_keys=True, indent=4))
+
         
 class HttpServer(BaseHTTPRequestHandler):
     def get_data(self,path):
         if path[0]=='/':
             path= path[1:]
-        if path not in self.server.cache:
-            try:
-                with open(self.server.config.base_url+'/'+path+'/data') as f:
-                    if path=='description.xml':
-                        data=f.read()
-                    else:
-                        data = json.dumps(json.load(f))
-                        data=data.replace("__REEFBEAT_DEVICE_IP__",self.server.config.ip)
-                    self.server.cache[path]=data
-                with open(self.server.config.base_url+'/'+path+'/access.json') as f:
-                    self.server.access[path] = json.load(f)
-            except Exception as e:
-                print("Exception: %s"%e)
-                return None
-        return self.server.cache[path]
-                
-    def do_GET (self):
-        print("You asked for : {}".format(self.path))
-        data = self.get_data(self.path)
-        if data:
-            self.send_response(200)
-            self.end_headers()
-            self.wfile.write(bytes(data,'utf8'))
+        return self.server._db[self.server.config.base_url+"/"+path]['data']
+
+    def is_allow(self,path,method):
+        if method in self.server._db[self.server.config.base_url+"/"+path[1:]]['access']['rights']:
+            return True
         else:
             self.send_response(404)
             self.end_headers()
+            return False
+            
+    def log_message(self,format, *args):
+        return 
+
+
+    def log_reqst(self,method):
+        content_length_str = self.headers.get('Content-Length')
+        data=""
+        if content_length_str:
+            data=self.rfile.read(int(content_length_str))
+        print("%s: %s %s (%s)"%(self.server.config.name,method,format(self.path),data))
+    
+    def do_GET (self):
+        self.log_reqst("GET")
+        data = self.get_data(self.path)
+        if data and self.is_allow(self.path,"GET"):
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(bytes(json.dumps(data),'utf8'))
 
     def do_POST (self):
-        self.send_response(501)
-        self.end_headers()
-
-    def do_PUT (self):
+        self.log_reqst("POST")
+        #content_length_str = self.headers.get('Content-Length')
+        #print("RFILE: %s"%self.rfile.read(int(content_length_str)))
+        if self.path=='off':
+            return
+            
         data=self.get_data(self.path)
-        if data and "PUT" in self.server.access[self.path[1:]]['rights']: 
+        if data and self.is_allow(self.path,"POST"):
             self.send_response(200)
             self.end_headers()
             self.wfile.write(bytes('{"success":true}','utf8'))
-        else:
-            self.send_response(501)
+        elif not data:
+            self.send_response(404)
+            self.end_headers()
+
+    def do_PUT (self):
+        self.log_reqst("PUT")
+        data=self.get_data(self.path)
+        if data and self.is_allow(self.path,"PUT"):
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(bytes('{"success":true}','utf8'))
+        elif not data:
+            self.send_response(404)
             self.end_headers()
 
     def do_DELETE(self):
-        self.send_response(501)
-        self.end_headers()
-
-
+        self.log_reqst("DELETE")
+        if self.path=='off':
+           
+            return
+        if self.is_allow(self.path,"DELETE"):
+            pass
 
 def ServerProcess(config):
     conf=json.loads(json.dumps(config), object_hook=lambda d: SimpleNamespace(**d))

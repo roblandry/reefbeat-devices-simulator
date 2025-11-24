@@ -111,7 +111,10 @@ class HttpServer(BaseHTTPRequestHandler):
             self.send_response(200)
             self.end_headers()
             if r_data:
-                post_action=self.server._db[self.path]['action']
+                try:
+                    post_action=self.server._db[self.path]['action']
+                except:
+                    post_action=None
                 if post_action:
                     val=eval(post_action.action)
                     print(val)
@@ -131,7 +134,13 @@ class HttpServer(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(bytes('{"success":true}','utf8'))
             return
+        elif self.pth=='/firmware':
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(bytes('{"success":true}','utf8'))
+            return 
         self.recv_with_param("POST")
+        
         
     def do_PUT (self):
         self.recv_with_param("PUT")

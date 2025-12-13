@@ -95,7 +95,10 @@ class HttpServer(BaseHTTPRequestHandler):
         if data and self.server.is_allow(self.path,"GET"):
             self.send_response(200)
             self.end_headers()
-            self.wfile.write(bytes(json.dumps(data),'utf8'))
+            if self.path.endswith('description.xml'):
+                self.wfile.write(bytes(data,'utf8'))
+            else:
+                self.wfile.write(bytes(json.dumps(data),'utf8'))
         else:
             self.send_response(404)
             self.end_headers()
@@ -134,7 +137,7 @@ class HttpServer(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(bytes('{"success":true}','utf8'))
             return
-        elif self.pth=='/firmware':
+        elif self.path=='/firmware':
             self.send_response(200)
             self.end_headers()
             self.wfile.write(bytes('{"success":true}','utf8'))

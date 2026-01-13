@@ -111,8 +111,14 @@ do
 	dest="."
     fi
     wget --quiet -O ${dest}/data http://${IP}${url}
+    if [ ! -s ${dest}/data ]
+    then
+	echo "-- ${dest}"
+	rm -rf ${dest}
+    else
     # Prepare for IP replacement
-    sed -i s/"${IP}"/"__REEFBEAT_DEVICE_IP__"/g ${dest}/data
+	sed -i s/"${IP}"/"__REEFBEAT_DEVICE_IP__"/g ${dest}/data
+    fi
     #echo '{"rights":["GET"]}' > ${dest}/access.json
     # Generate a new UUID and friendlyname
     if [ ${dest} == "description.xml" ]
@@ -140,6 +146,9 @@ do
     else
 	dest="."
     fi
-    sed -i s/"${hw_id}"/"${new_hw_id}"/g ${dest}/data
-    sed -i s/"${name}"/"${new_name}"/g ${dest}/data
+    if [ -s ${dest}/data ]
+       then
+	   sed -i s/"${hw_id}"/"${new_hw_id}"/g ${dest}/data
+	   sed -i s/"${name}"/"${new_name}"/g ${dest}/data
+    fi
 done

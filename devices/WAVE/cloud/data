@@ -1,1 +1,10 @@
-{"enabled":true,"connected":true,"connection_state":"CONNECTED","url":"mqtt.reef-beat.com:1883","api_key":"1WzSx64ZrqJuxWhC","api_secret":"*********","success":true,"message":""}
+{
+  "api_key": "1WzSx64ZrqJuxWhC",
+  "api_secret": "*********",
+  "connected": true,
+  "connection_state": "CONNECTED",
+  "enabled": true,
+  "message": "",
+  "success": true,
+  "url": "mqtt.reef-beat.com:1883"
+}

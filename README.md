@@ -2,11 +2,118 @@
 
 Simulate ReefBeat devices like ReefATO+, ReefDose, ReefLed,  ReefRun and ReefWave
 
-## Simulator
+This repo has two distinct parts:
 
-`reefbeat-devices.py`
+| Part             | Entrypoint            | Reads                              | Writes               | Purpose                                       |
+| ---------------- | --------------------- | ---------------------------------- | -------------------- | --------------------------------------------- |
+| Simulator        | `reefbeat-devices.py` | `config.json`, `devices/` fixtures | In-memory state only | Serve fixtures over HTTP like real devices    |
+| Fixture exporter | `run.py`              | Real device/cloud endpoints        | `devices/` fixtures  | Capture + sanitize fixtures for the simulator |
 
-## Fixture Exporter
+Typical workflow:
+
+1. Use `run.py` to export/sanitize fixtures into `devices/`.
+2. Run `reefbeat-devices.py` to serve those fixtures as simulated devices.
+
+---
+
+## Installation
+
+Both tools use the same Python environment and dependencies.
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+Optional .env file for cloud access (used by `run.py`):
+
+```text
+REEFBEAT_USERNAME=you@example.com
+REEFBEAT_PASSWORD=yourpassword
+```
+
+## Simulator (Serve Fixtures)
+
+`reefbeat-devices.py` runs the actual simulator.
+
+It starts one HTTP server per configured device and serves responses from the
+fixture tree under `devices/`.
+
+Requests that include a JSON payload (POST/PUT) can either:
+
+- Merge the payload into the in-memory state (using `jsonmerge`), or
+- Trigger a configured `post_action` that computes a derived update.
+
+---
+
+### Usage
+
+Run from the repo root so it can find `config.json` and the `devices/` tree:
+
+```bash
+./reefbeat-devices.py
+```
+
+Notes:
+
+- If you bind to port `80` or need to add the configured IP to the host, you’ll
+  typically need root privileges. The script attempts to re-run itself via
+  `sudo` if startup fails.
+- The IP auto-add logic is Linux-focused and assumes the interface is `eth0`
+  (it uses `ip addr show/add`).
+
+---
+
+### Configuration (`config.json`)
+
+The simulator reads `config.json` and expects a top-level `devices` array.
+Each entry controls a single device server:
+
+- `enabled`: Whether to start the server.
+- `name`: Label used in logs.
+- `base_url`: Fixture root for the device (e.g. `devices/DOSE4`).
+- `ip` / `port`: Bind address.
+- `access`: Per-endpoint HTTP method allow-list.
+  - `no_GET`: List of paths that must not allow GET.
+  - `PUT` / `POST`: Optional lists of paths that allow those methods.
+- `post_actions`: Optional computed updates keyed by request path.
+
+`post_actions` example conceptually:
+
+```jsonc
+{
+  "request": "/head/1/manual",
+  "action": {
+    "target": "/dashboard",
+    "action": "{...python expression...}"
+  }
+}
+```
+
+Security note: `action` is evaluated with `eval()`. Only run configs you trust.
+
+---
+
+### Fixture Layout
+
+The simulator serves one fixture file per endpoint:
+
+```text
+devices/<TYPE>/<endpoint>/data
+```
+
+For example:
+
+```text
+devices/DOSE4/device-info/data
+devices/DOSE4/dashboard/data
+devices/DOSE4/description.xml/data
+```
+
+`description.xml` is served as raw text; other endpoints are served as JSON.
+
+## Fixture Exporter (Create Fixtures)
 
 `run.py` is a Python-based fixture exporter for the ReefBeat Devices Simulator.
 
@@ -21,23 +128,6 @@ device type. Each endpoint is stored as a data file.
 Payloads are sanitized to remove secrets and personal data while preserving
 stable relationships (aquarium ↔ device ↔ user), making the fixtures safe
 to commit and suitable for automated testing.
-
----
-
-### Installation
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-```
-
-Optional .env file for cloud access:
-
-```text
-REEFBEAT_USERNAME=you@example.com
-REEFBEAT_PASSWORD=yourpassword
-```
 
 ---
 
@@ -65,7 +155,7 @@ INFO     : Enriching scan results from cloud...
 
 | From      | Aquarium      | Device            | Type        | IP           | Model    | FW     |
 | --------- | ------------- | ----------------- | ----------- | ------------ | -------- | ------ |
-| LAN       |               | RSATO+000000000   |             | 192.168.1.92 |
+| LAN       |               | RSATO+000000000   |             | 192.168.1.92 |          |        |
 | LAN+CLOUD | 80g Frag Tank | RSATO+0000000000  | reef-ato    | 192.168.1.96 | RSATO+   | 1.11.1 |
 | LAN+CLOUD | 80g Frag Tank | RSDOSE4-000000000 | reef-dosing | 192.168.1.94 | RSDOSE4  | 3.0.0  |
 | LAN+CLOUD | 80g Frag Tank | RSMAT-0000000000  | reef-mat    | 192.168.1.95 | RSMAT500 | 1.10.2 |

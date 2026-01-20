@@ -381,17 +381,16 @@ def ServerProcess(config: MutableMapping[str, Any]) -> None:
             while True:
                 httpd.handle_request()
         except Exception:
-            if os.geteuid() != 0:
-                print("Acquiring 'sudo' privileges ...")
-                os.system("sudo python{} {}".format(sys.version_info[0], ' "' + '" "'.join(sys.argv) + '"'))
-            else:
                 print("Unable to start server")
                 print(traceback.format_exc())
 
 
 if __name__ == "__main__":
+    if os.geteuid() != 0:
+        print("Must be run as root")
+        sys.exit(1);
+
     with open("config.json") as f:
-        # confs = json.load(f, object_hook=lambda d: SimpleNamespace(**d))
         confs: dict[str, Any] = json.load(f)
 
     threads: list[Thread] = []

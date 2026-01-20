@@ -1,1 +1,7 @@
-{"from":8059,"to":8196,"intensity":"Medium","cloud_duration":4,"no_cloud_duration":6}
+{
+  "cloud_duration": 4,
+  "from": 8059,
+  "intensity": "Medium",
+  "no_cloud_duration": 6,
+  "to": 8196
+}

@@ -1,1 +1,8 @@
-{"enabled":false,"started_on":"never","duration":50,"remaining_days":0,"start_intensity_factor":50,"current_intensity_factor":100}
+{
+  "current_intensity_factor": 100,
+  "duration": 50,
+  "enabled": false,
+  "remaining_days": 0,
+  "start_intensity_factor": 50,
+  "started_on": "never"
+}

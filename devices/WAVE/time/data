@@ -1,1 +1,11 @@
-{"pretty":"2026-01-13T01:48:38+01:00","utc_pretty":"2026-01-13T00:48:38Z","epoch":1768265318,"now":1768268918,"ntp_sync":true,"last_ntp_sync_at":1768263191,"timezone":60,"success":true,"message":""}
+{
+  "epoch": 1768265318,
+  "last_ntp_sync_at": 1768263191,
+  "message": "",
+  "now": 1768268918,
+  "ntp_sync": true,
+  "pretty": "2026-01-13T01:48:38+01:00",
+  "success": true,
+  "timezone": 60,
+  "utc_pretty": "2026-01-13T00:48:38Z"
+}

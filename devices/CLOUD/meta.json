@@ -1,9 +1,0 @@
-{
-  "exported_at": 1768703152,
-  "server": "cloud.reef-beat.com",
-  "endpoints": [
-    "/user",
-    "/aquarium",
-    "/device"
-  ]
-}
